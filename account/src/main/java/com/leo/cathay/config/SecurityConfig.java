@@ -29,7 +29,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.setSharedObject(CorsConfigurationSource.class, corsConfigurationSource());
+        http.cors(cors -> cors.configurationSource(corsConfigurationSource()));
         http
                 // 無狀態的 RESTFul API 禁用 CSRF 防護
                 .csrf(csrf -> csrf.disable())
