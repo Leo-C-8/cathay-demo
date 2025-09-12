@@ -1,8 +1,22 @@
 spring:
   config:
-      import: sm://
+    import: sm://
   cloud:
     gcp:
       project-id: golden-medium-471501-p8
 jwt:
   expiration: 3600000
+common:
+  cors:
+    allowed-origins:
+      - "http://localhost:3000"
+      # Cloud Run Frontend
+      - "https://cathay-demo-frontend-191169836402.asia-east1.run.app"
+    allowed-methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "OPTIONS"
+    allowed-headers: "*"
+    allow-credentials: true
