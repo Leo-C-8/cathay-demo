@@ -1,0 +1,8 @@
+spring:
+  config:
+    import: sm://
+  cloud:
+    gcp:
+      project-id: golden-medium-471501-p8
+jwt:
+  expiration: 3600000

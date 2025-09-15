@@ -1,6 +1,6 @@
-package com.leo.cathay.filter;
+package com.leo.cathay.security.filter;
 
-import com.leo.cathay.util.JwtTokenUtil;
+import com.leo.cathay.security.util.JwtTokenUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

@@ -23,3 +23,11 @@
 hs_err_pid*
 replay_pid*
 /.idea/
+/account/target/
+/image/target/
+/security/target/
+/security/src/main/resources/git.properties
+/image/src/main/resources/git.properties
+/account/src/main/resources/git.properties
+/thumbnails/
+/.idea/

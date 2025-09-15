@@ -1,4 +1,4 @@
-package com.leo.cathay.service;
+package com.leo.cathay.security.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.User;

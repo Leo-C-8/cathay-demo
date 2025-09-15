@@ -1,4 +1,4 @@
-package com.leo.cathay.util;
+package com.leo.cathay.security.util;
 
 import com.google.cloud.spring.secretmanager.SecretManagerTemplate;
 import io.jsonwebtoken.Jwts;

@@ -1,4 +1,4 @@
-package com.leo.cathay.config;
+package com.leo.cathay.security.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -1,4 +1,4 @@
-package com.leo.cathay.dto;
+package com.leo.cathay.account.dto;
 
 import lombok.Data;
 

@@ -1,8 +1,8 @@
 spring:
   config:
-    import: sm://
+    import: classpath:security-default.yml
   cloud:
     gcp:
-      project-id: golden-medium-471501-p8
+      project-id: classpath:security-default.yml
 jwt:
-  expiration: 3600000
+  expiration: classpath:security-default.yml

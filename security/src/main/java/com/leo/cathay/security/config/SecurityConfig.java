@@ -1,7 +1,6 @@
-package com.leo.cathay.config;
+package com.leo.cathay.security.config;
 
-import com.leo.cathay.filter.JwtAuthenticationFilter;
-import io.grpc.netty.shaded.io.netty.handler.codec.http.cors.CorsConfig;
+import com.leo.cathay.security.filter.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -35,10 +34,13 @@ public class SecurityConfig {
                 // 無狀態的 RESTFul API 禁用 CSRF 防護
                 .csrf(AbstractHttpConfigurer::disable)
                 // 無狀態的 RESTFul API 禁用 HTTP Session
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 禁用 Session
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/login").permitAll() // 登入路徑允許所有人存取
-                        .anyRequest().authenticated() // 其他所有路徑都需要驗證
+                        //  登入 註冊
+                        .requestMatchers("/auth/**").permitAll()
+                        //  git version
+                        .requestMatchers("/").permitAll()
+                        .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class); // 在 UsernamePasswordAuthenticationFilter 之前加入我們的 JWT 驗證過濾器
 

@@ -1,24 +1,27 @@
 # ===== Build Stage =====
 FROM maven:3.8.3-openjdk-17 AS builder
-
 WORKDIR /app
 
-# 複製 pom.xml 和 source code
+# 複製整個專案目錄
+# 這裡的 . 代表 Docker Build Context 的根目錄
 COPY . .
+RUN pwd
+RUN ls -l /app
+# 預先將 security 模組安裝到本地的 Maven repository
+RUN mvn clean install -pl security -am
 
-# 建立 Spring Boot 應用，產出 JAR（跳過測試加快速度）
+# 進入 account 模組目錄，進行打包
+WORKDIR /app/account
 RUN mvn clean package -Dmaven.test.skip=true
 
 # ===== Run Stage =====
 FROM openjdk:17-jdk-slim
-
 WORKDIR /app
 
-# 拷貝 fat JAR（只取編譯後的 jar）
-COPY --from=builder /app/target/*.jar app.jar
+# 從 builder 階段複製 fat JAR
+COPY --from=builder /app/account/target/*.jar app.jar
 
-# 設定 Cloud Run 需要的 PORT
 ENV PORT=8080
-
-# 啟動 Spring Boot 應用
 ENTRYPOINT ["java", "-jar", "app.jar"]
+
+# docker run -e PORT=8080 -e GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json -v ~/.config/gcloud:/root/.config/gcloud -p 8080:8080 account-service
