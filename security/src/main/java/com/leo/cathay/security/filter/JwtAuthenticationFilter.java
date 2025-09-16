@@ -43,7 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     }
                 }
             } catch (Exception e) {
-                // Token 驗證失敗，不處理，讓後續的 Spring Security 拋出異常
+                System.out.println("[doFilterInternal] :" + e);
             }
         }
         filterChain.doFilter(request, response);

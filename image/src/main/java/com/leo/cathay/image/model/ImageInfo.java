@@ -1,6 +1,7 @@
 package com.leo.cathay.image.model;
 
-import com.fasterxml.jackson.annotation.JsonValue;
+import com.leo.cathay.image.entity.FileInfo;
+import com.leo.cathay.image.enums.ThumbnailStatus;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -8,6 +9,7 @@ import java.time.LocalDateTime;
 @Data
 public class ImageInfo {
     private String fileName;
+    private String originalFileName;
     private long fileSize;
     private LocalDateTime uploadDate;
     private ThumbnailStatus thumbnailStatus;
@@ -15,30 +17,16 @@ public class ImageInfo {
 
     public ImageInfo() {
         this.uploadDate = LocalDateTime.now();
-        this.thumbnailStatus = ThumbnailStatus.PROCESSING; // 初始狀態為 "處理中"
+        this.thumbnailStatus = ThumbnailStatus.PROCESSING;
         this.thumbnailDownloadLink = null;
     }
 
-    public ImageInfo(String fileName, long fileSize) {
-        this();
-        this.fileName = fileName;
-        this.fileSize = fileSize;
-    }
-
-    public enum ThumbnailStatus {
-        PROCESSING("processing"),
-        COMPLETED("completed"),
-        FAILED("failed");
-
-        private final String value;
-
-        ThumbnailStatus(String value) {
-            this.value = value;
-        }
-
-        @JsonValue
-        public String getValue() {
-            return value;
-        }
+    public ImageInfo(FileInfo fileInfo) {
+        this.fileName = fileInfo.getFileName();
+        this.originalFileName = fileInfo.getOriginalFileName();
+        this.fileSize = fileInfo.getFileSize();
+        this.thumbnailStatus = fileInfo.getThumbnailStatus();
+        this.thumbnailDownloadLink = fileInfo.getThumbnailDownloadLi();
+        this.uploadDate = fileInfo.getUploadDate();
     }
 }

@@ -1,27 +1,17 @@
--- 如果 enum 類型已存在，先刪除再重建
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'thumbnail_status') THEN
-        DROP TYPE thumbnail_status;
-    END IF;
-END$$;
+-- 檢查 'user_account' 資料表是否存在，若存在則刪除
+DROP TABLE IF EXISTS user_account;
 
--- 建立 enum 類型
-CREATE TYPE thumbnail_status AS ENUM (
-    'processing',
-    'completed',
-    'failed'
-);
-
--- 如果資料表已存在，先刪除再重建
-DROP TABLE IF EXISTS file_info;
-
--- 建立資料表
-CREATE TABLE file_info (
+-- 創建 'user_account' 資料表
+CREATE TABLE user_account (
+    -- 'id' 欄位作為主鍵，使用序列自動遞增
     id SERIAL PRIMARY KEY,
-    file_name TEXT NOT NULL,
-    file_size BIGINT NOT NULL,
-    upload_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    thumbnail_status thumbnail_status NOT NULL DEFAULT 'processing',
-    thumbnail_download_link TEXT
+
+    -- 'user_name' 欄位，不可為空，且必須是唯一的
+    user_name VARCHAR(255) UNIQUE NOT NULL,
+
+    -- 'password' 欄位，不可為空
+    password VARCHAR(255) NOT NULL,
+
+    -- 'create_date' 欄位，自動填入當前時間戳
+    create_date TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

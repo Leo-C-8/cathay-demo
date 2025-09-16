@@ -1,6 +1,8 @@
 package com.leo.cathay.image.service;
 
+import com.leo.cathay.image.dto.FileListDto;
 import com.leo.cathay.image.entity.FileInfo;
+import com.leo.cathay.image.enums.ThumbnailStatus;
 import com.leo.cathay.image.model.ImageInfo;
 import com.leo.cathay.image.repository.FileInfoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,131 +10,103 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 
 @Service
 public class ImageService {
 
-    private final Path uploadDir = Paths.get("uploads");
-    private final Path thumbnailDir = Paths.get("thumbnails");
-    // 使用 ConcurrentHashMap 模擬資料庫儲存檔案資訊
-    private final Map<String, ImageInfo> fileInfoMap = new ConcurrentHashMap<>();
-
     @Autowired
     private FileInfoRepository fileInfoRepository;
 
-    public ImageService() throws IOException {
-        // 確保上傳和縮圖資料夾存在
-        Files.createDirectories(uploadDir);
-        Files.createDirectories(thumbnailDir);
-    }
-
     /**
-     * 處理圖片上傳並儲存到本地
+     * 上傳圖片並將其資訊儲存至資料庫。
      *
      * @param file 使用者上傳的圖片檔案
      * @return 包含檔案資訊的 FileInfo 物件
      * @throws IOException 如果檔案儲存失敗
      */
-    public ImageInfo uploadFile(MultipartFile file) throws IOException {
-        System.out.println("[uploadFile] file = " + file);
+    public FileInfo uploadFile(MultipartFile file) throws IOException {
+        try {
+            if (file.isEmpty()) {
+                throw new IOException("上傳檔案不得為空。");
+            }
 
-        // 取得使用者桌面上的 test 資料夾路徑
-        Path desktopTestDir = Paths.get(System.getProperty("user.home"), "Desktop", "test");
+            // 從 SecurityContextHolder 中獲取當前使用者的名稱
+//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//        String currentUserName = auth entication.getName();
+            String currentUserName = "test";
 
-        // 確保目錄存在
-        Files.createDirectories(desktopTestDir);
+            // 使用 UUID 產生唯一檔名，防止名稱衝突
+            String originalFileName = file.getOriginalFilename();
+            String fileExtension = "";
+            if (originalFileName != null && originalFileName.contains(".")) {
+                fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
+            }
+            String uniqueFileName = UUID.randomUUID() + fileExtension;
 
-        // 處理檔名（移除空白與特殊字元）
-        String originalFileName = file.getOriginalFilename();
-        if (originalFileName == null || originalFileName.isBlank()) {
-            throw new IOException("檔案名稱無效");
+            FileInfo fileInfo = FileInfo.builder()
+                    .fileName(uniqueFileName)
+                    .originalFileName(originalFileName)
+                    .userName(currentUserName)
+                    .fileSize(file.getSize())
+                    .build();
+
+            // 將實體儲存到資料庫
+            FileInfo savedFileInfo = fileInfoRepository.save(fileInfo);
+
+            // 啟動異步縮圖作業
+            processThumbnail(savedFileInfo);
+
+            return savedFileInfo;
+        } catch (Exception e) {
+            System.out.println("[uploadFile] Fail, e :" + e);
         }
-        String safeFileName = originalFileName.replaceAll("\\s+", "_");
 
-        // 建立儲存路徑
-        Path filePath = desktopTestDir.resolve(safeFileName);
-
-        // 儲存檔案
-        file.transferTo(filePath.toFile());
-
-        // 建立 ImageInfo（記憶體用）
-        ImageInfo imageInfo = new ImageInfo(safeFileName, file.getSize());
-        fileInfoMap.put(safeFileName, imageInfo);
-
-        // 建立 FileInfo（資料庫用）
-        FileInfo fileInfoEntity = FileInfo.builder()
-                .fileName(safeFileName)
-                .uploadDate(imageInfo.getUploadDate())
-                .thumbnailStatus(ImageInfo.ThumbnailStatus.PROCESSING)
-                .thumbnailDownloadLi(null)
-                .build();
-
-        fileInfoRepository.save(fileInfoEntity); // 寫入資料庫
-
-        // 模擬異步縮圖作業
-        processThumbnail(safeFileName);
-
-        return imageInfo;
+        return null;
     }
 
-
     /**
-     * 模擬縮圖作業，將檔案狀態從 "processing" 更新為 "completed"
+     * 模擬異步縮圖作業，並更新資料庫中的檔案狀態。
      *
-     * @param fileName 檔案名稱
+     * @param fileInfo 待處理的檔案資訊
      */
-    private void processThumbnail(String fileName) {
-        System.out.println("fileName = " + fileName);
-        // 實際應用中，這段程式碼會啟動一個異步任務來進行縮圖
-        // 這裡我們只是延遲一段時間來模擬作業
+    private void processThumbnail(FileInfo fileInfo) {
         new Thread(() -> {
             try {
-                // 模擬縮圖需要花費的時間
-                Thread.sleep(3000);
+                // 模擬縮圖作業
+                Thread.sleep(3000000);
 
-                ImageInfo imageInfo = fileInfoMap.get(fileName);
-                if (imageInfo != null) {
-                    // 模擬創建一個縮圖檔案
-                    Path thumbnailPath = thumbnailDir.resolve("thumbnail_" + fileName);
-                    Files.write(thumbnailPath, "這是模擬的縮圖內容".getBytes());
+                // 更新資料庫中的檔案狀態和下載連結
+                fileInfo.setThumbnailStatus(ThumbnailStatus.COMPLETED);
+                fileInfo.setThumbnailDownloadLi("/images/download/" + "thumbnail_" + fileInfo.getFileName());
 
-                    imageInfo.setThumbnailStatus(ImageInfo.ThumbnailStatus.COMPLETED);
-                    imageInfo.setThumbnailDownloadLink("/images/download/" + "thumbnail_" + fileName);
-                }
-            } catch (InterruptedException | IOException e) {
-                e.printStackTrace();
+            } catch (InterruptedException e) {
                 // 處理失敗情況
-                ImageInfo imageInfo = fileInfoMap.get(fileName);
-                if (imageInfo != null) {
-                    imageInfo.setThumbnailStatus(ImageInfo.ThumbnailStatus.FAILED);
-                }
+                fileInfo.setThumbnailStatus(ThumbnailStatus.FAILED);
+            } finally {
+                // 無論成功或失敗，都將最終狀態儲存到資料庫
+                fileInfoRepository.save(fileInfo);
             }
         }).start();
     }
 
     /**
-     * 取得所有已上傳圖片的清單
+     * 取得所有已上傳圖片的清單（從資料庫）
      *
-     * @return FileInfo 物件的 List
+     * @return 包含所有圖片資訊的列表
      */
-    public List<ImageInfo> getImageList() {
-        return new ArrayList<>(fileInfoMap.values());
-    }
+    public FileListDto getImageList() {
+        String currentUserName = "test";
 
-    /**
-     * 取得特定檔案的 Path 物件
-     *
-     * @param fileName 檔案名稱
-     * @return 檔案的 Path 物件
-     */
-    public Path getFile(String fileName) {
-        return this.thumbnailDir.resolve(fileName);
+        List<FileInfo> fileInfoList = fileInfoRepository.findAllByUserName(currentUserName);
+
+        List<ImageInfo> imageInfoList = fileInfoList.stream()
+                .map(ImageInfo::new)
+                .collect(Collectors.toList());
+
+        return new FileListDto(imageInfoList, imageInfoList.size());
     }
 }

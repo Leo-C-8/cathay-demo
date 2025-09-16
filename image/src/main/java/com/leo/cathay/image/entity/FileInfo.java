@@ -1,8 +1,11 @@
 package com.leo.cathay.image.entity;
 
-import com.leo.cathay.image.model.ImageInfo;
+import com.leo.cathay.image.enums.ThumbnailStatus;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
@@ -21,12 +24,21 @@ public class FileInfo {
     @Column(name = "file_name")
     private String fileName;
 
-    @Column(name = "upload_date", columnDefinition = "timestamp default CURRENT_TIMESTAMP")
+    @Column(name = "original_file_name")
+    private String originalFileName;
+
+    @Column(name = "user_name")
+    private String userName;
+
+    @Column(name = "file_size")
+    private Long fileSize;
+
+    @Column(name = "upload_date")
     private LocalDateTime uploadDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "thumbnail_status", columnDefinition = "thumbnail_status default 'processing'")
-    private ImageInfo.ThumbnailStatus thumbnailStatus;
+    @Column(name = "thumbnail_status")
+    private ThumbnailStatus thumbnailStatus; // 這裡直接引用獨立的類別
 
     @Column(name = "thumbnail_download_li")
     private String thumbnailDownloadLi;
@@ -37,7 +49,7 @@ public class FileInfo {
             uploadDate = LocalDateTime.now();
         }
         if (thumbnailStatus == null) {
-            thumbnailStatus = ImageInfo.ThumbnailStatus.PROCESSING;
+            thumbnailStatus = ThumbnailStatus.PROCESSING;
         }
     }
 }
