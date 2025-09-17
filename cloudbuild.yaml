@@ -1,19 +1,41 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
+  volumes:
+    - name: maven-cache
+      path: /root/.m2
+
 steps:
+  # 建構 Docker 映像檔
   - name: 'gcr.io/cloud-builders/docker'
     id: Build-Module
     args:
       - 'build'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA'
+      - 'asia-east1-docker.pkg.dev/$PROJECT_ID/cathay-demo-image/${_SERVICE_NAME}:$COMMIT_SHA'
       - '--file'
-      # _MODULE_NAME 是在 cloud build 上自定義的變數，用以指定個別模組的 Dockerfile 路徑
       - '${_MODULE_NAME}/Dockerfile'
-      # 指定從根目錄Build，才能抓到 security 共用模組
       - '.'
 
-images:
-  - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA'
+  # Push 到 Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: Push-Image
+    args:
+      - 'push'
+      - 'asia-east1-docker.pkg.dev/$PROJECT_ID/cathay-demo-image/${_SERVICE_NAME}:$COMMIT_SHA'
 
-#  避免 if 'build.service_account' is specified, the build must either 錯誤
-options:
-  logging: CLOUD_LOGGING_ONLY
+  # 部署到 Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: Deploy-to-Cloud-Run
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image=asia-east1-docker.pkg.dev/$PROJECT_ID/cathay-demo-image/${_SERVICE_NAME}:$COMMIT_SHA'
+      - '--region=asia-east1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--service-account=191169836402-compute@developer.gserviceaccount.com'
+
+images:
+  - 'asia-east1-docker.pkg.dev/$PROJECT_ID/cathay-demo-image/${_SERVICE_NAME}:$COMMIT_SHA'

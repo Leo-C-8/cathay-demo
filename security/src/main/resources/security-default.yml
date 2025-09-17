@@ -4,10 +4,12 @@ spring:
   cloud:
     gcp:
       project-id: golden-medium-471501-p8
+      sql:
+        database-name: postgres
+        instance-connection-name: golden-medium-471501-p8:asia-east1:cathay-demo
   datasource:
-    url: jdbc:postgresql://35.201.157.171:5432/postgres
     username: postgres
     password: 1qaz@WSX
-    driver-class-name: org.postgresql.Driver
+
 jwt:
   expiration: 3600000
