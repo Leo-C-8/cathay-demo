@@ -6,6 +6,8 @@ import com.leo.cathay.image.enums.ThumbnailStatus;
 import com.leo.cathay.image.model.ImageInfo;
 import com.leo.cathay.image.repository.FileInfoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -35,9 +37,8 @@ public class ImageService {
             }
 
             // 從 SecurityContextHolder 中獲取當前使用者的名稱
-//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//        String currentUserName = auth entication.getName();
-            String currentUserName = "test";
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String currentUserName = authentication.getName();
 
             // 使用 UUID 產生唯一檔名，防止名稱衝突
             String originalFileName = file.getOriginalFilename();
@@ -99,7 +100,9 @@ public class ImageService {
      * @return 包含所有圖片資訊的列表
      */
     public FileListDto getImageList() {
-        String currentUserName = "test";
+        // 從 SecurityContextHolder 中獲取當前使用者的名稱
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
 
         List<FileInfo> fileInfoList = fileInfoRepository.findAllByUserName(currentUserName);
 

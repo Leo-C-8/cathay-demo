@@ -25,7 +25,7 @@ public class AuthController {
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
             String jwt = userAccountService.login(loginRequest.getUserName(), loginRequest.getPassword());
-            return ResponseEntity.ok(new JwtResponse(jwt));
+            return ResponseEntity.ok(new JwtResponse(loginRequest.getUserName(), jwt));
         } catch (AuthenticationException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("錯誤的帳號或密碼");
         }
@@ -38,7 +38,7 @@ public class AuthController {
 
             String jwt = userAccountService.login(registerRequest.getUserName(), registerRequest.getPassword());
 
-            return ResponseEntity.ok(new JwtResponse(jwt));
+            return ResponseEntity.ok(new JwtResponse(registerRequest.getUserName(), jwt));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         } catch (Exception e) {
