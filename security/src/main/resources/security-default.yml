@@ -1,6 +1,6 @@
 spring:
   config:
-    import: sm://
+    import: sm@
   cloud:
     gcp:
       project-id: golden-medium-471501-p8
@@ -8,8 +8,9 @@ spring:
         database-name: postgres
         instance-connection-name: golden-medium-471501-p8:asia-east1:cathay-demo
   datasource:
-    username: postgres
-    password: 1qaz@WSX
+    username: ${sm@cathay-demo-db-username}
+    password: ${sm@cathay-demo-db-password}
 
 jwt:
+  secret: ${sm@cathay-demo-key}
   expiration: 3600000

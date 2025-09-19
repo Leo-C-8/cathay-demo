@@ -14,7 +14,7 @@ import java.util.Date;
 public class JwtTokenUtil {
 
     // 從GCP取得Token，須在application內設定 spring.config.import 前綴
-    @Value("${sm\\://cathay-demo-key}")
+    @Value("${jwt.secret}")
     private String secret;
 
     @Value("${jwt.expiration}")
