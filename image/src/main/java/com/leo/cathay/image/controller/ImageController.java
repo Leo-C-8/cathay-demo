@@ -1,14 +1,17 @@
 package com.leo.cathay.image.controller;
 
-import com.leo.cathay.image.dto.FileListDto;
+import com.leo.cathay.image.dto.ImageInfoListDto;
 import com.leo.cathay.image.service.ImageService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping("/images")
@@ -48,9 +51,39 @@ public class ImageController {
      * @return 包含所有圖片資訊的列表
      */
     @GetMapping("/list")
-    public ResponseEntity<FileListDto> getListImages() {
-        FileListDto fileListDto = imageService.getImageList();
-        return ResponseEntity.ok(fileListDto);
+    public ResponseEntity<ImageInfoListDto> getListImages() {
+        ImageInfoListDto imageInfoListDto = imageService.getImageList();
+        return ResponseEntity.ok(imageInfoListDto);
+    }
+
+    /**
+     * 下載圖片 API
+     *
+     * @param fileName 圖片的唯一檔案名稱
+     * @return 檔案內容
+     */
+    @GetMapping("/download/{fileName}")
+    public ResponseEntity<Resource> downloadImage(@PathVariable String fileName) {
+        try {
+            byte[] fileBytes = imageService.downloadFile(fileName);
+            Resource resource = new ByteArrayResource(fileBytes);
+
+            ContentDisposition disposition = ContentDisposition.attachment()
+                    .filename(URLEncoder.encode(fileName, StandardCharsets.UTF_8))
+                    .build();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentDisposition(disposition);
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(resource);
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }
-

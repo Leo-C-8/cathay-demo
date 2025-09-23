@@ -4,6 +4,8 @@ spring:
   cloud:
     gcp:
       project-id: classpath:security-default.yml
+      storage:
+        bucket: cathay-demo-bucket
   servlet:
     multipart:
       max-file-size: 10MB

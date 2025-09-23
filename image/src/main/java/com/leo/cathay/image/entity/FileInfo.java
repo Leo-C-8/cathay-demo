@@ -38,10 +38,10 @@ public class FileInfo {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "thumbnail_status")
-    private ThumbnailStatus thumbnailStatus; // 這裡直接引用獨立的類別
+    private ThumbnailStatus thumbnailStatus;
 
-    @Column(name = "thumbnail_download_li")
-    private String thumbnailDownloadLi;
+    @Column(name = "thumbnail_download_link")
+    private String thumbnailDownloadLink;
 
     @PrePersist
     public void prePersist() {

@@ -26,7 +26,7 @@ public class ImageInfo {
         this.originalFileName = fileInfo.getOriginalFileName();
         this.fileSize = fileInfo.getFileSize();
         this.thumbnailStatus = fileInfo.getThumbnailStatus();
-        this.thumbnailDownloadLink = fileInfo.getThumbnailDownloadLi();
+        this.thumbnailDownloadLink = fileInfo.getThumbnailDownloadLink();
         this.uploadDate = fileInfo.getUploadDate();
     }
 }

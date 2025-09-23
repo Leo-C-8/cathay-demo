@@ -1,11 +1,13 @@
 package com.leo.cathay.image.service;
 
-import com.leo.cathay.image.dto.FileListDto;
+import com.leo.cathay.image.dto.ImageInfoListDto;
 import com.leo.cathay.image.entity.FileInfo;
 import com.leo.cathay.image.enums.ThumbnailStatus;
 import com.leo.cathay.image.model.ImageInfo;
 import com.leo.cathay.image.repository.FileInfoRepository;
+import com.leo.cathay.image.util.GCSUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -13,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -22,6 +25,12 @@ public class ImageService {
 
     @Autowired
     private FileInfoRepository fileInfoRepository;
+
+    @Autowired
+    GCSUtils gcsUtils;
+
+    @Value("${spring.cloud.gcp.storage.bucket}")
+    private String cloudStorageBucket;
 
     /**
      * 上傳圖片並將其資訊儲存至資料庫。
@@ -42,11 +51,14 @@ public class ImageService {
 
             // 使用 UUID 產生唯一檔名，防止名稱衝突
             String originalFileName = file.getOriginalFilename();
+
             String fileExtension = "";
-            if (originalFileName != null && originalFileName.contains(".")) {
+
+            if (Objects.nonNull(originalFileName) && originalFileName.contains(".")) {
                 fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
             }
-            String uniqueFileName = UUID.randomUUID() + fileExtension;
+
+            String uniqueFileName = String.valueOf(UUID.randomUUID());
 
             FileInfo fileInfo = FileInfo.builder()
                     .fileName(uniqueFileName)
@@ -57,6 +69,7 @@ public class ImageService {
 
             // 將實體儲存到資料庫
             FileInfo savedFileInfo = fileInfoRepository.save(fileInfo);
+            gcsUtils.upload(file.getBytes(), currentUserName, uniqueFileName, fileExtension, cloudStorageBucket);
 
             // 啟動異步縮圖作業
             processThumbnail(savedFileInfo);
@@ -78,11 +91,11 @@ public class ImageService {
         new Thread(() -> {
             try {
                 // 模擬縮圖作業
-                Thread.sleep(3000000);
+                Thread.sleep(10 * 1000);
 
                 // 更新資料庫中的檔案狀態和下載連結
                 fileInfo.setThumbnailStatus(ThumbnailStatus.COMPLETED);
-                fileInfo.setThumbnailDownloadLi("/images/download/" + "thumbnail_" + fileInfo.getFileName());
+                fileInfo.setThumbnailDownloadLink("/images/download/" + fileInfo.getFileName());
 
             } catch (InterruptedException e) {
                 // 處理失敗情況
@@ -99,7 +112,7 @@ public class ImageService {
      *
      * @return 包含所有圖片資訊的列表
      */
-    public FileListDto getImageList() {
+    public ImageInfoListDto getImageList() {
         // 從 SecurityContextHolder 中獲取當前使用者的名稱
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String currentUserName = authentication.getName();
@@ -110,6 +123,20 @@ public class ImageService {
                 .map(ImageInfo::new)
                 .collect(Collectors.toList());
 
-        return new FileListDto(imageInfoList, imageInfoList.size());
+        return new ImageInfoListDto(imageInfoList, imageInfoList.size());
+    }
+
+    /**
+     * 從 Google Cloud Storage 下載檔案。
+     *
+     * @param fileName 圖片的唯一檔案名稱
+     * @return 檔案的位元組陣列
+     * @throws IOException 如果檔案下載失敗
+     */
+    public byte[] downloadFile(String fileName) throws IOException {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+
+        return gcsUtils.getFile(currentUserName, fileName, cloudStorageBucket);
     }
 }

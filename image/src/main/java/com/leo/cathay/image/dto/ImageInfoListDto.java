@@ -10,7 +10,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class FileListDto {
+public class ImageInfoListDto {
     private List<ImageInfo> files;
     private int imageSize;
 }
