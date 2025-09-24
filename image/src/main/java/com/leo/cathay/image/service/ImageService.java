@@ -2,10 +2,12 @@ package com.leo.cathay.image.service;
 
 import com.leo.cathay.image.dto.ImageInfoListDto;
 import com.leo.cathay.image.entity.FileInfo;
+import com.leo.cathay.image.enums.CloudStorgeFolderName;
 import com.leo.cathay.image.enums.ThumbnailStatus;
 import com.leo.cathay.image.model.ImageInfo;
 import com.leo.cathay.image.repository.FileInfoRepository;
 import com.leo.cathay.image.util.GCSUtils;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
@@ -40,6 +42,8 @@ public class ImageService {
      * @throws IOException 如果檔案儲存失敗
      */
     public FileInfo uploadFile(MultipartFile file) throws IOException {
+        System.out.println("[ImageService] uploadFile");
+
         try {
             if (file.isEmpty()) {
                 throw new IOException("上傳檔案不得為空。");
@@ -69,7 +73,7 @@ public class ImageService {
 
             // 將實體儲存到資料庫
             FileInfo savedFileInfo = fileInfoRepository.save(fileInfo);
-            gcsUtils.upload(file.getBytes(), currentUserName, uniqueFileName, fileExtension, cloudStorageBucket);
+            gcsUtils.upload(file.getBytes(), currentUserName, CloudStorgeFolderName.ORIGINAL, uniqueFileName, fileExtension, cloudStorageBucket);
 
             // 啟動異步縮圖作業
             processThumbnail(savedFileInfo);
@@ -88,6 +92,8 @@ public class ImageService {
      * @param fileInfo 待處理的檔案資訊
      */
     private void processThumbnail(FileInfo fileInfo) {
+        System.out.println("[ImageService] processThumbnail");
+
         new Thread(() -> {
             try {
                 // 模擬縮圖作業
@@ -113,6 +119,8 @@ public class ImageService {
      * @return 包含所有圖片資訊的列表
      */
     public ImageInfoListDto getImageList() {
+        System.out.println("[ImageService] getImageList");
+
         // 從 SecurityContextHolder 中獲取當前使用者的名稱
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String currentUserName = authentication.getName();
@@ -133,10 +141,32 @@ public class ImageService {
      * @return 檔案的位元組陣列
      * @throws IOException 如果檔案下載失敗
      */
-    public byte[] downloadFile(String fileName) throws IOException {
+    public byte[] downloadFile(String fileName, CloudStorgeFolderName folderName) throws IOException {
+        System.out.println("[ImageService] downloadFile");
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String currentUserName = authentication.getName();
 
-        return gcsUtils.getFile(currentUserName, fileName, cloudStorageBucket);
+        return gcsUtils.getFile(currentUserName, folderName, fileName, cloudStorageBucket);
+    }
+
+    @Transactional
+    public void deleteFile(String fileName) throws IOException {
+        System.out.println("[ImageService] deleteFile");
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+
+        // 刪除 FileInfo
+        if (!fileInfoRepository.existsByFileName(fileName)) {
+            throw new IllegalArgumentException("FileInfo not found for fileName: " + fileName);
+        }
+        fileInfoRepository.deleteByFileName(fileName);
+
+        // 呼叫 gcsUtils.deleteFile 來刪除原始圖
+        gcsUtils.deleteFile(currentUserName, CloudStorgeFolderName.ORIGINAL, fileName, cloudStorageBucket);
+
+        // 呼叫 gcsUtils.deleteFile 來刪除縮圖
+        gcsUtils.deleteFile(currentUserName, CloudStorgeFolderName.THUMBNAIL, fileName, cloudStorageBucket);
     }
 }

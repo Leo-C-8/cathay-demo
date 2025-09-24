@@ -12,4 +12,8 @@ public interface FileInfoRepository extends JpaRepository<FileInfo, Integer> {
     List<FileInfo> findByThumbnailStatus(ThumbnailStatus status);
 
     List<FileInfo> findAllByUserName(String userName);
+
+    void deleteByFileName(String fileName);
+
+    boolean existsByFileName(String fileName);
 }
