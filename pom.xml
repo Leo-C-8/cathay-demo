@@ -17,5 +17,6 @@
 		<module>account</module>
         <module>image</module>
 		<module>security</module>
+		<module>function</module>
 	</modules>
 </project>

@@ -10,23 +10,22 @@ import java.time.LocalDateTime;
 public class ImageInfo {
     private String fileName;
     private String originalFileName;
-    private long fileSize;
+    private Long fileSize;
+    private Long originalFileSize;
     private LocalDateTime uploadDate;
     private ThumbnailStatus thumbnailStatus;
-    private String thumbnailDownloadLink;
 
     public ImageInfo() {
         this.uploadDate = LocalDateTime.now();
         this.thumbnailStatus = ThumbnailStatus.PROCESSING;
-        this.thumbnailDownloadLink = null;
     }
 
     public ImageInfo(FileInfo fileInfo) {
         this.fileName = fileInfo.getFileName();
         this.originalFileName = fileInfo.getOriginalFileName();
         this.fileSize = fileInfo.getFileSize();
+        this.originalFileSize = fileInfo.getOriginalFileSize();
         this.thumbnailStatus = fileInfo.getThumbnailStatus();
-        this.thumbnailDownloadLink = fileInfo.getThumbnailDownloadLink();
         this.uploadDate = fileInfo.getUploadDate();
     }
 }

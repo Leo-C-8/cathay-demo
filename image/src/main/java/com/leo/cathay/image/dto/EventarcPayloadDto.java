@@ -10,4 +10,7 @@ public class EventarcPayloadDto {
 
     @JsonProperty("fileName")
     private String fileName;
+
+    @JsonProperty("fileSize")
+    private long fileSize;
 }

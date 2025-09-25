@@ -19,11 +19,11 @@ CREATE TYPE thumbnail_status AS ENUM (
 -- 建立資料表
 CREATE TABLE file_info (
     id SERIAL PRIMARY KEY,
-    file_name TEXT NOT NULL,
-    original_file_name TEXT NOT NULL,
     user_name VARCHAR(255) NOT NULL,
-    file_size BIGINT NOT NULL,
-    upload_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    thumbnail_status thumbnail_status NOT NULL DEFAULT 'processing',
-    thumbnail_download_link TEXT
+    original_file_name TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    original_file_size BIGINT,
+    file_size BIGINT,
+    upload_date TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    thumbnail_status thumbnail_status NOT NULL DEFAULT 'processing'
 );

@@ -21,14 +21,17 @@ public class FileInfo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "file_name")
-    private String fileName;
+    @Column(name = "user_name")
+    private String userName;
 
     @Column(name = "original_file_name")
     private String originalFileName;
 
-    @Column(name = "user_name")
-    private String userName;
+    @Column(name = "file_name")
+    private String fileName;
+
+    @Column(name = "original_file_size")
+    private Long originalFileSize;
 
     @Column(name = "file_size")
     private Long fileSize;
@@ -39,9 +42,6 @@ public class FileInfo {
     @Enumerated(EnumType.STRING)
     @Column(name = "thumbnail_status")
     private ThumbnailStatus thumbnailStatus;
-
-    @Column(name = "thumbnail_download_link")
-    private String thumbnailDownloadLink;
 
     @PrePersist
     public void prePersist() {

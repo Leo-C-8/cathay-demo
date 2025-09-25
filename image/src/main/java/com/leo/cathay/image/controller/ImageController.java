@@ -120,13 +120,13 @@ public class ImageController {
      */
     @PostMapping("/completed")
     public ResponseEntity<String> handleEventarc(@RequestBody EventarcPayloadDto payload) {
-        System.out.println("[EventarcController] handleEventarc payload=" + payload);
+        System.out.println("[ImageController] handleEventarc payload=" + payload);
 
         if (payload.getFileName() == null || payload.getFileName().isEmpty()) {
             return ResponseEntity.badRequest().body("Missing fileName in payload");
         }
 
-        FileInfo updated = imageService.updateThumbnailStatusToCompleted(payload.getFileName());
+        FileInfo updated = imageService.updateThumbnailStatusToCompleted(payload.getFileName(), payload.getFileSize());
         if (updated == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("FileInfo not found for fileName=" + payload.getFileName());

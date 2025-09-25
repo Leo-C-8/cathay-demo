@@ -68,7 +68,7 @@ public class ImageService {
                     .fileName(uniqueFileName)
                     .originalFileName(originalFileName)
                     .userName(currentUserName)
-                    .fileSize(file.getSize())
+                    .originalFileSize(file.getSize())
                     .build();
 
             // 將實體儲存到資料庫
@@ -147,12 +147,13 @@ public class ImageService {
      * @return 更新後的 FileInfo 物件，若找不到則回傳 null
      */
     @Transactional
-    public FileInfo updateThumbnailStatusToCompleted(String fileName) {
+    public FileInfo updateThumbnailStatusToCompleted(String fileName, long fileSize) {
         System.out.println("[ImageService] updateThumbnailStatusToCompleted, fileName=" + fileName);
 
         return fileInfoRepository.findByFileName(fileName)
                 .map(fileInfo -> {
                     fileInfo.setThumbnailStatus(ThumbnailStatus.COMPLETED);
+                    fileInfo.setFileSize(fileSize);
                     return fileInfoRepository.save(fileInfo);
                 })
                 .orElse(null);

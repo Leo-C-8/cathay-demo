@@ -12,5 +12,5 @@ import java.util.List;
 @AllArgsConstructor
 public class ImageInfoListDto {
     private List<ImageInfo> files;
-    private int imageSize;
+    private int imageCount;
 }
