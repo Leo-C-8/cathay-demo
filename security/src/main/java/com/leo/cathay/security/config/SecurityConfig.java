@@ -40,6 +40,8 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         //  git version
                         .requestMatchers("/").permitAll()
+                        //  function
+                        .requestMatchers("/images/completed").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class); // 在 UsernamePasswordAuthenticationFilter 之前加入我們的 JWT 驗證過濾器

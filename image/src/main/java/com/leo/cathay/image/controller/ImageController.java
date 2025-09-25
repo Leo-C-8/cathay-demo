@@ -1,7 +1,9 @@
 package com.leo.cathay.image.controller;
 
+import com.leo.cathay.image.dto.EventarcPayloadDto;
 import com.leo.cathay.image.dto.ImageDownloadRequestDto;
 import com.leo.cathay.image.dto.ImageInfoListDto;
+import com.leo.cathay.image.entity.FileInfo;
 import com.leo.cathay.image.service.ImageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
@@ -111,5 +113,25 @@ public class ImageController {
         } catch (IOException e) {
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    /**
+     * 接收 Eventarc 的 JSON 事件並更新 FileInfo 縮圖狀態
+     */
+    @PostMapping("/completed")
+    public ResponseEntity<String> handleEventarc(@RequestBody EventarcPayloadDto payload) {
+        System.out.println("[EventarcController] handleEventarc payload=" + payload);
+
+        if (payload.getFileName() == null || payload.getFileName().isEmpty()) {
+            return ResponseEntity.badRequest().body("Missing fileName in payload");
+        }
+
+        FileInfo updated = imageService.updateThumbnailStatusToCompleted(payload.getFileName());
+        if (updated == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("FileInfo not found for fileName=" + payload.getFileName());
+        }
+
+        return ResponseEntity.ok("Thumbnail status updated to COMPLETED for fileName=" + payload.getFileName());
     }
 }

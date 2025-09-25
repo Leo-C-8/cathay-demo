@@ -75,42 +75,12 @@ public class ImageService {
             FileInfo savedFileInfo = fileInfoRepository.save(fileInfo);
             gcsUtils.upload(file.getBytes(), currentUserName, CloudStorgeFolderName.ORIGINAL, uniqueFileName, fileExtension, cloudStorageBucket);
 
-            // 啟動異步縮圖作業
-            processThumbnail(savedFileInfo);
-
             return savedFileInfo;
         } catch (Exception e) {
             System.out.println("[uploadFile] Fail, e :" + e);
         }
 
         return null;
-    }
-
-    /**
-     * 模擬異步縮圖作業，並更新資料庫中的檔案狀態。
-     *
-     * @param fileInfo 待處理的檔案資訊
-     */
-    private void processThumbnail(FileInfo fileInfo) {
-        System.out.println("[ImageService] processThumbnail");
-
-        new Thread(() -> {
-            try {
-                // 模擬縮圖作業
-                Thread.sleep(10 * 1000);
-
-                // 更新資料庫中的檔案狀態和下載連結
-                fileInfo.setThumbnailStatus(ThumbnailStatus.COMPLETED);
-                fileInfo.setThumbnailDownloadLink("/images/download/" + fileInfo.getFileName());
-
-            } catch (InterruptedException e) {
-                // 處理失敗情況
-                fileInfo.setThumbnailStatus(ThumbnailStatus.FAILED);
-            } finally {
-                // 無論成功或失敗，都將最終狀態儲存到資料庫
-                fileInfoRepository.save(fileInfo);
-            }
-        }).start();
     }
 
     /**
@@ -168,5 +138,23 @@ public class ImageService {
 
         // 呼叫 gcsUtils.deleteFile 來刪除縮圖
         gcsUtils.deleteFile(currentUserName, CloudStorgeFolderName.THUMBNAIL, fileName, cloudStorageBucket);
+    }
+
+    /**
+     * 將指定檔案名稱的 FileInfo 縮圖狀態更新為 COMPLETED。
+     *
+     * @param fileName 要更新的檔案名稱（UUID 格式）
+     * @return 更新後的 FileInfo 物件，若找不到則回傳 null
+     */
+    @Transactional
+    public FileInfo updateThumbnailStatusToCompleted(String fileName) {
+        System.out.println("[ImageService] updateThumbnailStatusToCompleted, fileName=" + fileName);
+
+        return fileInfoRepository.findByFileName(fileName)
+                .map(fileInfo -> {
+                    fileInfo.setThumbnailStatus(ThumbnailStatus.COMPLETED);
+                    return fileInfoRepository.save(fileInfo);
+                })
+                .orElse(null);
     }
 }
