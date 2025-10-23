@@ -1,0 +1,383 @@
+# =========================================
+# RBAC 權限設定 (讓 Nginx Ingress Controller 能存取 Kubernetes 資源)
+# =========================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nginx-ingress-serviceaccount
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nginx-ingress-clusterrole
+rules:
+  # 基本資源讀取權限 (ConfigMap, Pod, Service, Node 等)
+  - apiGroups: [""]
+    resources: ["configmaps", "endpoints", "nodes", "pods", "secrets", "services", "namespaces"]
+    verbs: ["get", "list", "watch"]
+
+  # 允許存取 Ingress 資源與 IngressClass
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses", "ingressclasses"]
+    verbs: ["get", "list", "watch"]
+
+  # 允許更新 Ingress 狀態
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses/status"]
+    verbs: ["update"]
+
+  # 允許建立/更新事件
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+
+  # 允許監聽 EndpointSlice (k8s 新版服務端點)
+  - apiGroups: ["discovery.k8s.io"]
+    resources: ["endpointslices"]
+    verbs: ["get", "list", "watch"]
+
+  # Leader 選舉所需的 Lease 權限
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: nginx-ingress-clusterrole-nisa-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: nginx-ingress-clusterrole
+subjects:
+  - kind: ServiceAccount
+    name: nginx-ingress-serviceaccount
+    namespace: default
+
+---
+
+# =========================================
+# NGINX INGRESS CONTROLLER DEPLOYMENT (核心組件)
+# =========================================
+# 此 Deployment 部署 Nginx Ingress Controller
+# 與下方 LoadBalancer Service 搭配，用於接收外部流量
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-ingress-controller
+  labels:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: ingress-nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ingress-nginx
+      app.kubernetes.io/instance: ingress-nginx
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ingress-nginx
+        app.kubernetes.io/instance: ingress-nginx
+    spec:
+      # 指定上方建立的 ServiceAccount
+      serviceAccountName: nginx-ingress-serviceaccount
+      containers:
+        - name: controller
+          image: registry.k8s.io/ingress-nginx/controller:v1.8.1 # 請使用最新穩定版本
+          args:
+            - /nginx-ingress-controller
+            - --publish-service=$(POD_NAMESPACE)/nginx-ingress-controller-loadbalancer
+            - --election-id=ingress-controller-leader
+            - --controller-class=k8s.io/ingress-nginx
+            - --ingress-class=nginx
+            - --configmap=$(POD_NAMESPACE)/ingress-nginx-controller
+            - --watch-namespace=default # 僅監看 default 命名空間的 Ingress
+          env:
+            # 動態取得 Pod 名稱與命名空間
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+            - name: https
+              containerPort: 443
+              protocol: TCP
+          # 健康檢查與資源限制略
+
+---
+
+# =========================================
+# NGINX INGRESS CONTROLLER SERVICE (LoadBalancer)
+# =========================================
+# 提供外部入口，會獲得 EXTERNAL-IP
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-ingress-controller-loadbalancer
+  # 若未指定 namespace，預設為 default
+spec:
+  # 選擇器需與 Controller Pod 標籤匹配
+  selector:
+    app.kubernetes.io/name: ingress-nginx
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
+    - name: https
+      port: 443
+      targetPort: 443
+      protocol: TCP
+  type: LoadBalancer # 關鍵設定，讓雲端分配外部 IP
+
+---
+
+# =========================================
+# 應用程式 INGRESS 路由設定
+# =========================================
+# 將不同 path 導向不同 Service
+
+# =========================================
+# React 前端 Ingress (根目錄，不 rewrite)
+# =========================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend-root-routing
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: leo-chang.ddns.net
+      http:
+        paths:
+          - path: /(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: react-service
+                port:
+                  number: 80
+
+---
+
+# =========================================
+# Account + Image 後端 Ingress (rewrite 去掉前綴)
+# =========================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: backend-path-routing
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: leo-chang.ddns.net
+      http:
+        paths:
+          - path: /account(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: account-service
+                port:
+                  number: 80
+          - path: /image(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: image-service
+                port:
+                  number: 80
+---
+# 定義 IngressClass，指定控制器為 nginx
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: nginx
+spec:
+  controller: k8s.io/ingress-nginx
+
+---
+
+# =========================================
+# REACT 前端 Deployment
+# =========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: react-demo
+  labels:
+    app: react-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: react-demo
+  template:
+    metadata:
+      labels:
+        app: react-demo
+    spec:
+      containers:
+        - name: react-container
+          image: asia-east1-docker.pkg.dev/golden-medium-471501-p8/cathay-demo-image/cathay-demo-frontend:k8s
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "128Mi"
+
+---
+
+# =========================================
+# REACT 前端 Service (ClusterIP)
+# =========================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: react-service
+spec:
+  selector:
+    app: react-demo
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP # 僅供 Ingress 內部轉發使用
+
+---
+
+# =========================================
+# ACCOUNT 後端 Deployment
+# =========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-service
+  labels:
+    app: account-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: account-service
+  template:
+    metadata:
+      labels:
+        app: account-service
+    spec:
+      # 使用 GSA 綁定的 KSA（可能用於 Workload Identity）
+      serviceAccountName: gsa-accessor-ksa
+      containers:
+        - name: account-container
+          image: asia-east1-docker.pkg.dev/golden-medium-471501-p8/cathay-demo-image/cathay-demo-account:k8s
+          ports:
+            - containerPort: 8080
+          env:
+            - name: JAVA_OPTS
+              value: "-Xms256m -Xmx512m"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+
+---
+
+# =========================================
+# ACCOUNT 後端 Service (ClusterIP)
+# =========================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: account-service
+spec:
+  selector:
+    app: account-service
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
+
+---
+
+# =========================================
+# IMAGE 後端 Deployment
+# =========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: image-service
+  labels:
+    app: image-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: image-service
+  template:
+    metadata:
+      labels:
+        app: image-service
+    spec:
+      serviceAccountName: gsa-accessor-ksa
+      containers:
+        - name: image-container
+          image: asia-east1-docker.pkg.dev/golden-medium-471501-p8/cathay-demo-image/cathay-demo-image:k8s
+          ports:
+            - containerPort: 8080
+          env:
+            - name: JAVA_OPTS
+              value: "-Xms256m -Xmx512m"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+
+---
+
+# =========================================
+# IMAGE 後端 Service (ClusterIP)
+# =========================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: image-service
+spec:
+  selector:
+    app: image-service
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
+

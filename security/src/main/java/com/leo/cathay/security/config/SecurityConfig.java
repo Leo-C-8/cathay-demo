@@ -55,7 +55,8 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(
                 "http://localhost:3000",
-                "https://cathay-demo-frontend-191169836402.asia-east1.run.app"
+                "https://cathay-demo-frontend-191169836402.asia-east1.run.app",
+                "https://leo-chang.ddns.net"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));

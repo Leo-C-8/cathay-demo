@@ -1,3 +1,6 @@
+# gcloud builds submit --config cloudbuild.yaml --substitutions=_SERVICE_NAME=cathay-demo-account,_MODULE_NAME=account .
+# gcloud builds submit --config cloudbuild.yaml --substitutions=_SERVICE_NAME=cathay-demo-image,_MODULE_NAME=image .
+
 options:
   logging: CLOUD_LOGGING_ONLY
   volumes:
@@ -7,11 +10,11 @@ options:
 steps:
   # 建構 Docker 映像檔
   - name: 'gcr.io/cloud-builders/docker'
-    id: Build-Module
+    id: Build-Image
     args:
       - 'build'
       - '-t'
-      - 'asia-east1-docker.pkg.dev/$PROJECT_ID/cathay-demo-image/${_SERVICE_NAME}:$COMMIT_SHA'
+      - 'asia-east1-docker.pkg.dev/$PROJECT_ID/cathay-demo-image/${_SERVICE_NAME}:k8s'
       - '--file'
       - '${_MODULE_NAME}/Dockerfile'
       - '.'
@@ -21,21 +24,7 @@ steps:
     id: Push-Image
     args:
       - 'push'
-      - 'asia-east1-docker.pkg.dev/$PROJECT_ID/cathay-demo-image/${_SERVICE_NAME}:$COMMIT_SHA'
-
-  # 部署到 Cloud Run
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: Deploy-to-Cloud-Run
-    entrypoint: 'gcloud'
-    args:
-      - 'run'
-      - 'deploy'
-      - '${_SERVICE_NAME}'
-      - '--image=asia-east1-docker.pkg.dev/$PROJECT_ID/cathay-demo-image/${_SERVICE_NAME}:$COMMIT_SHA'
-      - '--region=asia-east1'
-      - '--platform=managed'
-      - '--allow-unauthenticated'
-      - '--service-account=191169836402-compute@developer.gserviceaccount.com'
+      - 'asia-east1-docker.pkg.dev/$PROJECT_ID/cathay-demo-image/${_SERVICE_NAME}:k8s'
 
 images:
-  - 'asia-east1-docker.pkg.dev/$PROJECT_ID/cathay-demo-image/${_SERVICE_NAME}:$COMMIT_SHA'
+  - 'asia-east1-docker.pkg.dev/$PROJECT_ID/cathay-demo-image/${_SERVICE_NAME}:k8s'
